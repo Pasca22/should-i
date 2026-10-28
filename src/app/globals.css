@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-go: var(--go);
+  --color-maybe: var(--maybe);
+  --color-skip: var(--skip);
+  --color-idle: var(--idle);
+  --color-bar: var(--bar);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+                  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* "Pine" — the app is dark only. */
+:root {
+  --background: #08191a;
+  --foreground: #ddf0ec;
+  --card: #0f2828;
+  --card-foreground: #ddf0ec;
+  --popover: #0f2828;
+  --popover-foreground: #ddf0ec;
+  --primary: #3fd1b4;
+  --primary-foreground: #04201b;
+  --secondary: #17393a;
+  --secondary-foreground: #ddf0ec;
+  --muted: #17393a;
+  --muted-foreground: #86a7a1;
+  --accent: #17393a;
+  --accent-foreground: #ddf0ec;
+  --destructive: #ef7b6b;
+  --border: #1a3e3c;
+  --input: #1d4544;
+  --ring: #3fd1b4;
+  --chart-1: #5eead4;
+  --chart-2: #3fd1b4;
+  --chart-3: #e0b450;
+  --chart-4: #ef7b6b;
+  --chart-5: #86a7a1;
+  --radius: 0.75rem;
+  /* Verdict colours */
+  --go: #5eead4;
+  --maybe: #e0b450;
+  --skip: #ef7b6b;
+  --idle: #4b6e6a;
+  --bar: #6ea8c9;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* Tailwind's preflight sizes images to their container, which breaks Leaflet's map tiles. */
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+.leaflet-container {
+  background: var(--background);
+  font: inherit;
+}
+/* Dark map from the standard (light) OpenStreetMap tiles; markers and lines are in other panes, so keep their colours. */
+.leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.55) sepia(0.15) hue-rotate(110deg);
+}
+/* Route points drawn on the map (Leaflet divIcons). */
+.route-point {
+  border-radius: 9999px;
+  border: 2px solid var(--background);
+  background: var(--primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+}
+.route-point-start {
+  background: var(--go);
+  border: 3px solid var(--background);
+}
+.route-point-end {
+  background: var(--background);
+  border: 4px solid var(--primary);
+}
+.leaflet-tooltip {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
