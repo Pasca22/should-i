@@ -190,7 +190,7 @@ export default function RunApp() {
           size="lg" className="mt-1 h-11 w-full text-base font-semibold"
           disabled={busy || !route.length || checksLeft === 0} onClick={askRoute}
         >
-          Ask Jev
+          Should I run?
         </Button>
         {checksLeft !== null && (
           <p className={cn("text-center text-xs", checksLeft === 0 ? "text-destructive" : "text-muted-foreground")}>

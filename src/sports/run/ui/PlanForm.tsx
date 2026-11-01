@@ -79,7 +79,6 @@ export default function PlanForm({ values, minDate, disabled, onChange }: Props)
   const lengthSet = Boolean(Number(values.durH) || Number(values.durM));
   const durH = lengthSet ? values.durH || "0" : SUGGESTED_LENGTH.h;
   const durM = lengthSet ? values.durM || "0" : SUGGESTED_LENGTH.m;
-  const hasPlan = startSet || lengthSet;
 
   return (
     <div className="grid gap-4">
@@ -143,9 +142,6 @@ export default function PlanForm({ values, minDate, disabled, onChange }: Props)
           />
         </WheelField>
       </div>
-      <p className="-mt-1 text-xs text-muted-foreground">
-        {hasPlan ? "Jev judges your plan." : "Any time and length: Jev picks the best window for you."}
-      </p>
     </div>
   );
 }

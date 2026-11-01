@@ -1,5 +1,5 @@
 import { getSession } from "@/shared/auth/server";
-import { DAILY_CHECK_LIMIT, maxRoutePointsFor, quotaFor } from "@/shared/beta";
+import { DAILY_CHECK_LIMIT, maxRoutePointsFor, releaseCheck, reserveCheck } from "@/shared/beta";
 import { getDb } from "@/shared/db/client";
 import { errorResponse, UserError, type ErrorBody } from "@/shared/errors";
 import { dbCache } from "@/shared/weather/db-cache";
@@ -17,19 +17,8 @@ export async function POST(request: Request) {
   // Every check spends Jev tokens, so only signed-in users may ask, within their daily limit.
   const session = await getSession();
   if (!session) return Response.json({ error: "Please sign in again." }, { status: 401 });
+  let checkId: string | null = null;
   try {
-    const quota = await quotaFor(session.user.id, session.user.email);
-    if (quota.limit !== null && quota.used >= quota.limit) {
-      const body: ErrorBody = {
-        title: "Daily limit reached",
-        error:
-          `You've used all ${DAILY_CHECK_LIMIT} checks for the last 24 hours. ` +
-          (quota.resetsAt ? `Your next check frees up in about ${fromNow(quota.resetsAt)}.` : "Try again later."),
-        retryable: false,
-      };
-      return Response.json(body, { status: 429 });
-    }
-
     const body = await request.json().catch(() => {
       throw new UserError("The request body must be JSON.");
     });
@@ -37,6 +26,21 @@ export async function POST(request: Request) {
     if (maxPoints !== null && Array.isArray(body.waypoints) && body.waypoints.length > maxPoints) {
       throw new UserError(`During the beta a route can have at most ${maxPoints} points. Remove a few and try again.`);
     }
+
+    const reserved = await reserveCheck(session.user.id, session.user.email, "run");
+    const { quota } = reserved;
+    if (!reserved.id) {
+      const limitReached: ErrorBody = {
+        title: "Daily limit reached",
+        error:
+          `You've used all ${DAILY_CHECK_LIMIT} checks for the last 24 hours. ` +
+          (quota.resetsAt ? `Your next check frees up in about ${fromNow(quota.resetsAt)}.` : "Try again later."),
+        retryable: false,
+      };
+      return Response.json(limitReached, { status: 429 });
+    }
+    checkId = reserved.id;
+
     const db = getDb();
     const result = await runCheck(
       {
@@ -45,11 +49,12 @@ export async function POST(request: Request) {
         startMin: parseTime(body.start || null, "start"),
         duration: body.duration === undefined || body.duration === "" ? undefined : Number(body.duration),
       },
-      { cache: dbCache(db), db, userId: session.user.id },
+      { cache: dbCache(db), db, checkId },
     );
-    // The check just made counts too.
-    return Response.json({ ...result, quota: { ...quota, used: quota.used + (quota.limit === null ? 0 : 1) } });
+    // The quota already counts this check.
+    return Response.json({ ...result, quota });
   } catch (e) {
+    if (checkId) await releaseCheck(checkId);
     return errorResponse(e);
   }
 }

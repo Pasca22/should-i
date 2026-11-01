@@ -68,14 +68,16 @@ the deployed HTTPS site can.
    to move it, tap it to remove it. The map starts at your location (asked once per visit) and remembers the last view.
 2. **Plan** (optional): the day (today up to 7 days ahead), the start time and the run length, on scroll wheels. Left on
    "any", Jev picks the best window.
-3. **Ask Jev**: the server (`POST /api/run/check`)
+3. **Should I run?**: the server (`POST /api/run/check`)
+   - reserves one of the tester's daily checks by inserting the `checks` row first (under a per-user Postgres
+     advisory lock, so parallel requests can't slip past the limit); a check that fails is given back,
    - samples up to **8 forecast points** along the route (start, about every 1.5 km, finish; a loop's finish is skipped),
    - fetches weather and air quality for all of them in **one batched Open-Meteo request each**, cached per point for
      10 minutes in Postgres (`weather_cache`),
    - picks the forecast steps that overlap the run (15-minute steps for runs up to 3 h, hourly otherwise),
    - asks Jev one request with these questions: `go_run` (noul), `conditions` (score 0–4), `when` (choice of start
      windows, or keep the planned start), `rain_gear`, `warm_layers`, and `right_now` (today, no start set),
-   - stores the check (state, answers, tokens) in `checks`.
+   - fills in the reserved row (state, answers, tokens).
 4. **Result**: the verdict (Go run ≥ 65%, Skip it < 35%), the tiles, the forecast during the run and per point. The
    route line takes the verdict's colour.
 

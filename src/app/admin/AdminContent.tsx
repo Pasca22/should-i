@@ -54,6 +54,26 @@ async function loadRows(): Promise<Row[]> {
   ];
 }
 
+function Status({ r }: { r: Row }) {
+  if (r.role === "admin") {
+    return <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Admin</span>;
+  }
+  if (r.name) return <span className="text-xs">Joined</span>;
+  return <span className="text-xs text-muted-foreground">Invited {ago(r.invitedAt)} · not signed in yet</span>;
+}
+
+function Account({ r }: { r: Row }) {
+  return (
+    <>
+      <div className="font-medium break-words">{r.name ?? r.email}</div>
+      {r.name && <div className="text-xs break-all text-muted-foreground">{r.email}</div>}
+      {r.note && <div className="text-xs text-muted-foreground italic">{r.note}</div>}
+    </>
+  );
+}
+
+const checks24h = (r: Row) => (r.role === "admin" ? String(r.checks24h) : `${r.checks24h} / ${DAILY_CHECK_LIMIT}`);
+
 export default async function AdminContent() {
   await requireAdminPage();
   const rows = await loadRows();
@@ -61,7 +81,7 @@ export default async function AdminContent() {
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <h2 className="text-base font-semibold">Invite a tester</h2>
         <p className="mt-1 mb-4 text-sm text-muted-foreground">
           Add the Google account they sign in with. Testers get {DAILY_CHECK_LIMIT} checks per 24 hours and up to{" "}
@@ -70,12 +90,43 @@ export default async function AdminContent() {
         <InviteForm />
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-base font-semibold">People in the beta</h2>
           <span className="text-xs text-muted-foreground">{testers.length} testers</span>
         </div>
-        <div className="overflow-x-auto">
+        {/* Phones: one card per person. */}
+        <ul className="grid gap-2 md:hidden">
+          {rows.map((r) => (
+            <li key={`${r.role}-${r.email}`} className="rounded-xl border border-border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Account r={r} />
+                </div>
+                {r.role === "tester" && <RemoveInviteButton email={r.email} />}
+              </div>
+              <div className="mt-1.5">
+                <Status r={r} />
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                {[
+                  ["Checks (24 h)", checks24h(r)],
+                  ["All checks", String(r.checksTotal)],
+                  ["Jev tokens", nf.format(r.tokens)],
+                  ["Last check", ago(r.lastCheck)],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        {/* Wider screens: a table. */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
@@ -88,22 +139,12 @@ export default async function AdminContent() {
               {rows.map((r) => (
                 <tr key={`${r.role}-${r.email}`} className="align-top">
                   <td className="border-b border-border px-2 py-2.5">
-                    <div className="font-medium">{r.name ?? r.email}</div>
-                    {r.name && <div className="text-xs text-muted-foreground">{r.email}</div>}
-                    {r.note && <div className="text-xs text-muted-foreground italic">{r.note}</div>}
+                    <Account r={r} />
                   </td>
                   <td className="border-b border-border px-2 py-2.5 whitespace-nowrap">
-                    {r.role === "admin" ? (
-                      <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Admin</span>
-                    ) : r.name ? (
-                      <span className="text-xs">Joined</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Invited {ago(r.invitedAt)} · not signed in yet</span>
-                    )}
+                    <Status r={r} />
                   </td>
-                  <td className="border-b border-border px-2 py-2.5 whitespace-nowrap tabular-nums">
-                    {r.role === "admin" ? r.checks24h : `${r.checks24h} / ${DAILY_CHECK_LIMIT}`}
-                  </td>
+                  <td className="border-b border-border px-2 py-2.5 whitespace-nowrap tabular-nums">{checks24h(r)}</td>
                   <td className="border-b border-border px-2 py-2.5 tabular-nums">{r.checksTotal}</td>
                   <td className="border-b border-border px-2 py-2.5 tabular-nums">{nf.format(r.tokens)}</td>
                   <td className="border-b border-border px-2 py-2.5 whitespace-nowrap text-muted-foreground">{ago(r.lastCheck)}</td>

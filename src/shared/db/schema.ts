@@ -18,14 +18,16 @@ export const checks = pgTable(
     // Who asked; null for checks from before sign-in existed. Kept (unlinked) if the user is deleted.
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     sport: text("sport").notNull(), // validated against SPORTS in code, not a Postgres enum
-    route: jsonb("route").$type<{ lat: number; lon: number }[]>().notNull(), // the waypoints, as sent
-    date: date("date", { mode: "string" }).notNull(),
+    // The rest is null while the check runs: the row is inserted first to reserve a slot in the daily limit
+    // (see reserveCheck), and filled in once Jev has answered.
+    route: jsonb("route").$type<{ lat: number; lon: number }[]>(), // the waypoints, as sent
+    date: date("date", { mode: "string" }),
     startTime: text("start_time"),
     durationMin: integer("duration_min"),
-    state: jsonb("state").notNull(),
-    questions: jsonb("questions").notNull(),
-    answers: jsonb("answers").notNull(),
-    model: text("model").notNull(),
+    state: jsonb("state"),
+    questions: jsonb("questions"),
+    answers: jsonb("answers"),
+    model: text("model"),
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

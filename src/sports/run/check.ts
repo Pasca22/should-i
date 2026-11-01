@@ -1,4 +1,5 @@
 import type { Db } from "@/shared/db/client";
+import { eq } from "drizzle-orm";
 import { checks } from "@/shared/db/schema";
 import { UserError } from "@/shared/errors";
 import { askJev } from "@/shared/jev";
@@ -19,10 +20,13 @@ const validPoint = (p: unknown): p is LatLon => {
   return typeof lat === "number" && typeof lon === "number" && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
 };
 
-/** Ask Jev about one run along the given waypoints (one point = a run around that spot) and record the check. */
+/**
+ * Ask Jev about one run along the given waypoints (one point = a run around that spot) and record the answer in the
+ * check reserved for it (see reserveCheck).
+ */
 export async function runCheck(
   input: CheckInput,
-  deps: { cache: ResponseCache; db?: Db; userId?: string },
+  deps: { cache: ResponseCache; db?: Db; checkId?: string },
 ): Promise<CheckResult> {
   const { waypoints, date, startMin, duration } = input;
   if (!Array.isArray(waypoints) || !waypoints.length) throw new UserError("Tap the map to put at least one point on your route.");
@@ -82,15 +86,16 @@ export async function runCheck(
   const questions = buildQuestions(new Date(now).getUTCHours(), first.days_ahead, plan);
   const result = await askJev<RunAnswers>(state, questions);
 
-  if (deps.db) {
+  if (deps.db && deps.checkId) {
     // History is secondary: a database hiccup shouldn't cost the user their answer.
     await deps.db
-      .insert(checks)
-      .values({
-        userId: deps.userId ?? null, sport: "run", route: waypoints, date, startTime: plan.start ?? null, durationMin: duration ?? null,
+      .update(checks)
+      .set({
+        route: waypoints, date, startTime: plan.start ?? null, durationMin: duration ?? null,
         state, questions, answers: result.answers, model: result.model,
         inputTokens: result.usage?.input_tokens ?? null, outputTokens: result.usage?.output_tokens ?? null,
       })
+      .where(eq(checks.id, deps.checkId))
       .catch((e) => console.error("recording the check failed", e));
   }
 
